@@ -35,7 +35,12 @@ AVAILABLE_MODELS = [
     "claude-4-opus",
     "mistral-large2",
     "llama3.1-70b",
+    "llama3.1-8b",
 ]
+# Modèles de repli (souvent disponibles sans cross-region). Si le modèle choisi
+# est indisponible dans la région, complete() bascule automatiquement sur le
+# premier modèle de cette liste qui répond.
+FALLBACK_MODELS = ["mistral-large2", "llama3.1-70b", "llama3.1-8b"]
 
 # Cortex Search : service indexant SILVER_MARKETING (créé via sql/02_*.sql).
 CORTEX_SEARCH_SERVICE = f"{FQ}.MONIN_MARKETING_SEARCH"
