@@ -1,0 +1,174 @@
+name: monin_conseil_stock
+description: >
+  Modèle sémantique MONIN pour le conseil à l'utilisation des stocks importateurs.
+  Source principale : la vue GOLD_CONSEIL_STOCK qui consolide stock, ventes,
+  prévisions et indicateurs de risque par importateur et par produit.
+
+tables:
+  - name: conseil_stock
+    description: >
+      Une ligne par couple (importateur, produit) pour le mois courant, avec les
+      KPI de gestion de stock : couverture, rotation, écart prévision/réel et
+      score de risque d'immobilisation.
+    base_table:
+      database: MONIN
+      schema: PUBLIC
+      table: GOLD_CONSEIL_STOCK
+
+    dimensions:
+      - name: importateur_id
+        expr: importateur_id
+        data_type: TEXT
+        description: Identifiant technique de l'importateur.
+      - name: importateur
+        expr: importateur
+        data_type: TEXT
+        description: Nom de l'importateur (distributeur / client MONIN).
+        synonyms: [client, distributeur, partenaire]
+      - name: zone
+        expr: zone
+        data_type: TEXT
+        description: Zone géographique de l'importateur.
+        synonyms: [région, marché, géographie]
+        sample_values: ["Europe Sud", "Europe Centre", "Asie Pacifique"]
+      - name: commercial
+        expr: commercial
+        data_type: TEXT
+        description: Commercial MONIN en charge du compte.
+      - name: ean
+        expr: ean
+        data_type: TEXT
+        description: Code EAN du produit.
+      - name: libelle
+        expr: libelle
+        data_type: TEXT
+        description: Libellé du produit (ex. Vanille Premium, Caramel, Concombre).
+        synonyms: [produit, article, référence, sirop, sauce]
+      - name: gamme
+        expr: gamme
+        data_type: TEXT
+        description: Gamme MONIN du produit.
+        sample_values: ["Le Sirop", "La Sauce", "Le Fruit"]
+        synonyms: [famille, catégorie]
+      - name: statut_produit
+        expr: statut_produit
+        data_type: TEXT
+        description: Statut catalogue du produit (actif, en arrêt, etc.).
+      - name: statut
+        expr: statut
+        data_type: TEXT
+        description: >
+          Statut de gestion calculé : 'à risque' (immobilisation), 'opportunité'
+          (à pousser) ou 'normal'.
+        sample_values: ["à risque", "opportunité", "normal"]
+        synonyms: [risque, situation, état]
+
+    time_dimensions:
+      - name: mois_courant
+        expr: mois_courant
+        data_type: DATE
+        description: Mois de référence (dernière photo de stock disponible).
+
+    measures:
+      - name: stock_actuel
+        expr: stock_actuel
+        data_type: NUMBER
+        default_aggregation: sum
+        description: Quantité en stock à date.
+        synonyms: [stock, inventaire, quantité en stock]
+      - name: ventes_moy_mensuelles
+        expr: ventes_moy_mensuelles
+        data_type: NUMBER
+        default_aggregation: avg
+        description: Ventes moyennes mensuelles sur 6 mois glissants.
+        synonyms: [ventes moyennes, écoulement mensuel]
+      - name: couverture_jours
+        expr: couverture_jours
+        data_type: NUMBER
+        default_aggregation: avg
+        description: >
+          Nombre de jours de stock au rythme de vente actuel. Élevée = surstock /
+          risque d'immobilisation ; faible = risque de rupture.
+        synonyms: [couverture, jours de stock, autonomie]
+      - name: rotation_annuelle
+        expr: rotation_annuelle
+        data_type: NUMBER
+        default_aggregation: avg
+        description: Nombre de rotations du stock par an. Élevée = bonne rotation.
+        synonyms: [rotation, turnover]
+      - name: prevision_mois_suivant
+        expr: prevision_mois_suivant
+        data_type: NUMBER
+        default_aggregation: sum
+        description: Prévision de ventes pour le mois suivant.
+        synonyms: [prévision, forecast, prévu mois prochain]
+      - name: reel_mois_courant
+        expr: reel_mois_courant
+        data_type: NUMBER
+        default_aggregation: sum
+        description: Ventes réelles du mois courant.
+      - name: prevu_mois_courant
+        expr: prevu_mois_courant
+        data_type: NUMBER
+        default_aggregation: sum
+        description: Ventes prévues pour le mois courant.
+      - name: ecart_prevision_reel_pct
+        expr: ecart_prevision_reel_pct
+        data_type: NUMBER
+        default_aggregation: avg
+        description: Écart en % entre le réel et le prévu du mois courant.
+        synonyms: [écart prévision, fiabilité prévision]
+      - name: score_risque_immobilisation
+        expr: score_risque_immobilisation
+        data_type: NUMBER
+        default_aggregation: avg
+        description: >
+          Score de 0 à 1 du risque d'immobilisation du stock (1 = risque maximal).
+          Combine couverture élevée, rotation faible et ventes en déclin.
+        synonyms: [score de risque, risque immobilisation, niveau de risque]
+
+verified_queries:
+  - name: top_10_risques
+    question: Quel est le top 10 des produits les plus à risque ?
+    sql: >
+      SELECT importateur, libelle, gamme, couverture_jours, rotation_annuelle,
+             score_risque_immobilisation, statut
+      FROM MONIN.PUBLIC.GOLD_CONSEIL_STOCK
+      ORDER BY score_risque_immobilisation DESC NULLS LAST
+      LIMIT 10
+
+  - name: meilleure_rotation_importateur
+    question: Quels importateurs ont la meilleure rotation ?
+    sql: >
+      SELECT importateur, ROUND(AVG(rotation_annuelle), 2) AS rotation_moyenne,
+             COUNT(*) AS nb_produits
+      FROM MONIN.PUBLIC.GOLD_CONSEIL_STOCK
+      GROUP BY importateur
+      ORDER BY rotation_moyenne DESC NULLS LAST
+
+  - name: surstockes
+    question: Quels produits sont surstockés ?
+    sql: >
+      SELECT importateur, libelle, couverture_jours, stock_actuel, rotation_annuelle
+      FROM MONIN.PUBLIC.GOLD_CONSEIL_STOCK
+      WHERE couverture_jours > 150
+      ORDER BY couverture_jours DESC
+
+  - name: rupture_mois_prochain
+    question: Quels produits risquent un manque de stock le mois prochain ?
+    sql: >
+      SELECT importateur, libelle, stock_actuel, prevision_mois_suivant,
+             couverture_jours
+      FROM MONIN.PUBLIC.GOLD_CONSEIL_STOCK
+      WHERE prevision_mois_suivant > stock_actuel
+         OR couverture_jours < 30
+      ORDER BY couverture_jours ASC NULLS FIRST
+
+  - name: a_promouvoir
+    question: Quels produits doivent être promus ?
+    sql: >
+      SELECT importateur, libelle, gamme, statut, couverture_jours,
+             prevision_mois_suivant, ventes_moy_mensuelles
+      FROM MONIN.PUBLIC.GOLD_CONSEIL_STOCK
+      WHERE statut = 'opportunité'
+      ORDER BY prevision_mois_suivant DESC NULLS LAST

@@ -1,0 +1,9 @@
+# Dépendances Streamlit in Snowflake (canal Anaconda Snowflake).
+# snowflake-snowpark-python est fourni par l'environnement SiS.
+name: app_environment
+channels:
+  - snowflake
+dependencies:
+  - streamlit
+  - pandas
+  - plotly

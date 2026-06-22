@@ -1,0 +1,24 @@
+# Projet Snowflake CLI — déploiement Streamlit in Snowflake.
+# Déploiement :  snow streamlit deploy --replace
+definition_version: 2
+entities:
+  monin_conseil_stock:
+    type: streamlit
+    identifier:
+      name: MONIN_CONSEIL_STOCK
+      schema: PUBLIC
+      database: MONIN
+    main_file: app.py
+    query_warehouse: COMPUTE_WH
+    stage: MONIN.PUBLIC.MONIN_APP_STAGE
+    artifacts:
+      - app.py
+      - config.py
+      - environment.yml
+      - models/
+      - repository/
+      - services/
+      - prompts/
+      - utils/
+      - views/
+      - sql/monin_conseil_stock.yaml
