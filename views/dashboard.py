@@ -8,7 +8,10 @@ from __future__ import annotations
 import plotly.express as px
 import streamlit as st
 
-from config import COLOR_PRIMARY, COLOR_PRIMARY_DARK, COLOR_RISK, COLOR_OPPORTUNITY, COLOR_NAVY
+from config import (
+    COLOR_PRIMARY, COLOR_PRIMARY_DARK, COLOR_RISK, COLOR_OPPORTUNITY, COLOR_NAVY,
+    IMAGE_PLACEHOLDER,
+)
 from repository import stock_repository as repo
 from utils import ui, state
 from utils.formatting import fr_number, fr_money, statut_badge_html
@@ -89,6 +92,20 @@ def render(session) -> None:
 
     st.divider()
 
+    # ----- Galerie produits à risque -------------------------------------
+    risque = conseil[conseil["STATUT"] == "à risque"].head(6)
+    if not risque.empty:
+        ui.section("Produits à surveiller en priorité", "🔴")
+        cols = st.columns(len(risque))
+        for col, (_, p) in zip(cols, risque.iterrows()):
+            with col:
+                url = p["IMAGE_URL"] if isinstance(p["IMAGE_URL"], str) and p["IMAGE_URL"] else IMAGE_PLACEHOLDER
+                st.image(url, use_container_width=True)
+                st.markdown(f"**{p['LIBELLE']}**")
+                st.caption(f"Couv. {fr_number(p['COUVERTURE_JOURS'], ' j')} · "
+                           f"risque {int(round((p['SCORE_RISQUE_IMMOBILISATION'] or 0) * 100))}/100")
+        st.divider()
+
     # ----- Tableau détaillé GOLD -----------------------------------------
     ui.section("Détail GOLD_CONSEIL_STOCK", "📋")
     filtre = st.multiselect("Filtrer par statut", ["à risque", "opportunité", "normal"],
@@ -98,6 +115,7 @@ def render(session) -> None:
         table,
         use_container_width=True, hide_index=True,
         column_config={
+            "IMAGE_URL": st.column_config.ImageColumn("Visuel", width="small"),
             "EAN": "EAN",
             "LIBELLE": "Produit",
             "GAMME": "Gamme",

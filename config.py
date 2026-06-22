@@ -27,7 +27,7 @@ V_GOLD = f"{FQ}.GOLD_CONSEIL_STOCK"
 # Modèle Cortex Complete par défaut. Liste alignée sur les modèles Claude
 # disponibles dans Snowflake Cortex. La disponibilité dépend de la région du
 # compte ; activer "cross-region inference" si besoin. Sélectionnable dans l'UI.
-DEFAULT_MODEL = "claude-3-5-sonnet"
+DEFAULT_MODEL = "claude-4-sonnet"
 AVAILABLE_MODELS = [
     "claude-3-5-sonnet",
     "claude-3-7-sonnet",
@@ -59,6 +59,15 @@ ANALYST_TIMEOUT_MS = 50_000
 # --------------------------------------------------------------------------- #
 APP_TITLE = "MONIN · Conseil Stock Intelligent"
 APP_SUBTITLE = "Assistant IA pour le pilotage des stocks importateurs — propulsé par Snowflake Cortex"
+
+# Logos (URLs publiques).
+LOGO_MONIN = "https://logos-world.net/wp-content/uploads/2022/03/Monin-Logo.png"
+LOGO_TEAMWORK = "https://showmetherex.com/uploads/images/rex_TEAMWORK-500x0-c-default_6a1a883a751e5.png"
+
+# Table des images produits (catalogue Shopify). Jointure : voir image_repository.
+T_IMAGES = f"{FQ}.IMAGES"
+# Image de repli si aucun visuel n'est trouvé pour un produit.
+IMAGE_PLACEHOLDER = "https://placehold.co/400x400/EEF3F9/29B5E8?text=MONIN"
 
 # Palette Snowflake (bleu / blanc).
 COLOR_PRIMARY = "#29B5E8"      # Snowflake blue

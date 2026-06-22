@@ -24,6 +24,7 @@ from config import (
     DATABASE,
     SCHEMA,
 )
+from repository.image_repository import MAIN_IMAGE_SUBQUERY
 
 CACHE_TTL = 300  # secondes
 
@@ -103,18 +104,20 @@ def get_mois_ventes(_session, importateur_id, ean) -> pd.DataFrame:
 # --------------------------------------------------------------------------- #
 @st.cache_data(ttl=CACHE_TTL, show_spinner=False)
 def get_conseil(_session, importateur_id) -> pd.DataFrame:
-    """Table détaillée GOLD_CONSEIL_STOCK pour un importateur."""
+    """Table détaillée GOLD_CONSEIL_STOCK pour un importateur (avec visuel produit)."""
     return _df(
         _session,
         f"""
-        SELECT ean, libelle, gamme, statut_produit,
-               stock_actuel, ventes_moy_mensuelles,
-               couverture_jours, rotation_annuelle,
-               prevision_mois_suivant, reel_mois_courant, prevu_mois_courant,
-               ecart_prevision_reel_pct, score_risque_immobilisation, statut
-        FROM {V_GOLD}
-        WHERE importateur_id = ?
-        ORDER BY score_risque_immobilisation DESC NULLS LAST
+        SELECT img.image_url AS image_url,
+               g.ean, g.libelle, g.gamme, g.statut_produit,
+               g.stock_actuel, g.ventes_moy_mensuelles,
+               g.couverture_jours, g.rotation_annuelle,
+               g.prevision_mois_suivant, g.reel_mois_courant, g.prevu_mois_courant,
+               g.ecart_prevision_reel_pct, g.score_risque_immobilisation, g.statut
+        FROM {V_GOLD} g
+        LEFT JOIN {MAIN_IMAGE_SUBQUERY} img ON img.ean = TO_VARCHAR(g.ean)
+        WHERE g.importateur_id = ?
+        ORDER BY g.score_risque_immobilisation DESC NULLS LAST
         """,
         params=[importateur_id],
     )
@@ -285,12 +288,14 @@ def get_produits_a_risque(_session, importateur_id, limit: int = 15) -> pd.DataF
     return _df(
         _session,
         f"""
-        SELECT ean, libelle, gamme, zone, statut,
-               couverture_jours, rotation_annuelle,
-               score_risque_immobilisation, stock_actuel, ventes_moy_mensuelles
-        FROM {V_GOLD}
-        WHERE importateur_id = ?
-        ORDER BY score_risque_immobilisation DESC NULLS LAST
+        SELECT g.ean, g.libelle, g.gamme, g.zone, g.statut,
+               g.couverture_jours, g.rotation_annuelle,
+               g.score_risque_immobilisation, g.stock_actuel, g.ventes_moy_mensuelles,
+               img.image_url AS image_url
+        FROM {V_GOLD} g
+        LEFT JOIN {MAIN_IMAGE_SUBQUERY} img ON img.ean = TO_VARCHAR(g.ean)
+        WHERE g.importateur_id = ?
+        ORDER BY g.score_risque_immobilisation DESC NULLS LAST
         LIMIT ?
         """,
         params=[importateur_id, limit],

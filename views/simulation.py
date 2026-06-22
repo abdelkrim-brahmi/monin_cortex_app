@@ -10,9 +10,10 @@ from __future__ import annotations
 
 import streamlit as st
 
-from config import COLOR_OPPORTUNITY, COLOR_RISK, COLOR_NAVY
+from config import COLOR_OPPORTUNITY, COLOR_RISK, COLOR_NAVY, IMAGE_PLACEHOLDER
 from models.entities import SimulationResult
 from repository import stock_repository as repo
+from repository import image_repository as img_repo
 from services import simulation_service
 from utils import ui, state
 from utils.formatting import statut_badge_html
@@ -75,12 +76,17 @@ def render(session) -> None:
     result = st.session_state.get(state.KEY_LAST_SIM)
     if isinstance(result, SimulationResult) and result.ean == ean:
         st.divider()
-        render_result(result)
+        url = img_repo.image_url(img_repo.get_main_image_map(session), ean, IMAGE_PLACEHOLDER)
+        render_result(result, url)
 
 
-def render_result(result: SimulationResult) -> None:
-    st.markdown(f"### Résultat — {result.libelle}")
-    st.caption(f"Mois {result.mois} · quantité {result.quantite_avant or 0:g} → {result.quantite_apres:g}")
+def render_result(result: SimulationResult, image_url: str | None = None) -> None:
+    head_img, head_txt = st.columns([1, 4])
+    with head_img:
+        st.image(image_url or IMAGE_PLACEHOLDER, use_container_width=True)
+    with head_txt:
+        st.markdown(f"### {result.libelle}")
+        st.caption(f"Mois {result.mois} · quantité {result.quantite_avant or 0:g} → {result.quantite_apres:g}")
 
     cols = st.columns(4)
     _ba_card(cols[0], "Couverture", result.avant.couverture_jours, result.apres.couverture_jours, " j", "down")
@@ -150,7 +156,8 @@ def _run_demo_scenario(session, imp_id, label) -> None:
     st.session_state[state.KEY_LAST_SIM] = result
 
     st.markdown("**3️⃣ KPI recalculés**")
-    render_result(result)
+    url = img_repo.image_url(img_repo.get_main_image_map(session), ean, IMAGE_PLACEHOLDER)
+    render_result(result, url)
 
     # Prépare la question préremplie pour l'assistant.
     st.session_state[state.KEY_CHAT_PREFILL] = "Pourquoi les recommandations ont-elles changé ?"

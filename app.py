@@ -33,8 +33,10 @@ PAGES = {
 
 def _sidebar(session) -> str:
     with st.sidebar:
-        st.markdown("## ❄️ MONIN × Cortex")
-        st.caption("Conseil à l'utilisation des stocks")
+        st.image(config.LOGO_MONIN, use_container_width=True)
+        st.markdown("<div style='text-align:center;color:#9FB3C8;font-size:.8rem;"
+                    "margin:-.3rem 0 .6rem'>× Snowflake Cortex AI</div>",
+                    unsafe_allow_html=True)
 
         # --- Sélection de l'importateur (globale) ---
         importateurs = repo.get_importateurs(session)
@@ -78,6 +80,14 @@ def _sidebar(session) -> str:
 
         mode = "Streamlit in Snowflake" if is_in_snowflake() else "Mode local (Snowpark)"
         st.caption(f"🔌 {mode}")
+
+        # --- Signature TeamWork ---
+        st.divider()
+        st.markdown("<div style='text-align:center;color:#9FB3C8;font-size:.72rem;"
+                    "margin-bottom:.3rem'>Réalisé par</div>", unsafe_allow_html=True)
+        lc, cc, rc = st.columns([1, 3, 1])
+        with cc:
+            st.image(config.LOGO_TEAMWORK, use_container_width=True)
 
     return page
 

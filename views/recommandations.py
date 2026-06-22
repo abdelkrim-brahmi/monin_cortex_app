@@ -8,11 +8,12 @@ from __future__ import annotations
 
 import streamlit as st
 
+from config import IMAGE_PLACEHOLDER
 from repository import stock_repository as repo
+from repository import image_repository as img_repo
 from services import cortex_search
 from services.cortex_complete import complete
 from prompts.templates import prompt_recommandation
-from models.entities import KpiSnapshot
 from utils import ui, state
 from utils.formatting import fr_number, statut_badge_html
 
@@ -36,15 +37,28 @@ def render(session) -> None:
                        range(len(libelles)), format_func=lambda i: libelles[i])
     produit = risques.iloc[idx].to_dict()
 
-    # Aperçu KPI du produit.
+    # Aperçu produit : visuel + KPI.
     score100 = int(round((produit.get("SCORE_RISQUE_IMMOBILISATION") or 0) * 100))
-    ui.render_kpis([
-        ui.kpi_card("Couverture", fr_number(produit.get("COUVERTURE_JOURS"), " j"), "📆"),
-        ui.kpi_card("Rotation", fr_number(produit.get("ROTATION_ANNUELLE"), "×", 2), "🔄"),
-        ui.kpi_card("Score risque", f"{score100}/100", "⚠️"),
-        ui.kpi_card("Stock", fr_number(produit.get("STOCK_ACTUEL"), " u."), "🏬"),
-    ])
-    st.markdown(f"Statut : {statut_badge_html(produit.get('STATUT'))}", unsafe_allow_html=True)
+    img_col, kpi_col = st.columns([1, 3])
+    with img_col:
+        url = produit.get("IMAGE_URL") if isinstance(produit.get("IMAGE_URL"), str) else None
+        st.image(url or IMAGE_PLACEHOLDER, use_container_width=True)
+    with kpi_col:
+        ui.render_kpis([
+            ui.kpi_card("Couverture", fr_number(produit.get("COUVERTURE_JOURS"), " j"), "📆"),
+            ui.kpi_card("Rotation", fr_number(produit.get("ROTATION_ANNUELLE"), "×", 2), "🔄"),
+            ui.kpi_card("Score risque", f"{score100}/100", "⚠️"),
+            ui.kpi_card("Stock", fr_number(produit.get("STOCK_ACTUEL"), " u."), "🏬"),
+        ])
+        st.markdown(f"Statut : {statut_badge_html(produit.get('STATUT'))}", unsafe_allow_html=True)
+
+    # Galerie complète du produit (plusieurs visuels possibles).
+    gallery = img_repo.get_images_for_ean(session, produit.get("EAN"))
+    if len(gallery) > 1:
+        with st.expander(f"🖼️ Galerie produit ({len(gallery)} visuels)"):
+            gcols = st.columns(min(len(gallery), 4))
+            for gc, (_, im) in zip(gcols, gallery.iterrows()):
+                gc.image(im["IMAGE_URL"], caption=im["ALT"] or "", use_container_width=True)
 
     st.write("")
     if st.button("🧭 Générer la recommandation", type="primary", use_container_width=True):

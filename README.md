@@ -104,6 +104,12 @@ ALTER ACCOUNT SET CORTEX_ENABLED_CROSS_REGION = 'ANY_REGION';
   `SILVER_VENTES` suffit à recalculer tous les KPI au re-`SELECT`. Le cache de
   lecture est purgé après écriture.
 - **Score de risque** : exprimé 0–1 dans la vue, affiché ×100 dans l'UI.
-- **CA** : calculé si une colonne prix existe dans `SILVER_PRODUIT`, sinon
-  l'app affiche le volume vendu (détection automatique).
+- **CA** : lu depuis `SILVER_VENTES.CA` (détection automatique de la colonne) ;
+  l'`upsert` de simulation recalcule aussi le CA pour rester cohérent.
+- **Images produits** : table `IMAGES` jointe par `PRODUCT_ID = SILVER_PRODUIT.EAN`
+  (plusieurs visuels par produit, `POSITION` = ordre, 1 = principale).
+  Image principale via `QUALIFY ROW_NUMBER()`. Visuels affichés dans le tableau
+  (`ImageColumn`), la galerie risque, la simulation et les recommandations, avec
+  fallback `IMAGE_PLACEHOLDER`.
+- **Marque** : logo MONIN (barre latérale) et logo TeamWork (pied « Réalisé par »).
 ```
